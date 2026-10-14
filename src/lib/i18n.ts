@@ -34,6 +34,11 @@ export interface Dict {
   subjects: string;
   grade: string;
   preview: string;
+  /** Frame counter, e.g. «Кадр 2 из 4»; {i} and {n} are substituted. */
+  frameOf: string;
+  menu: string;
+  closeMenu: string;
+  allOfSubject: string;
 }
 
 export const L: Record<Lang, Dict> = {
@@ -71,6 +76,10 @@ export const L: Record<Lang, Dict> = {
     subjects: 'предмета',
     grade: 'класс',
     preview: 'Смотреть',
+    frameOf: 'Кадр {i} из {n}',
+    menu: 'Меню',
+    closeMenu: 'Закрыть меню',
+    allOfSubject: 'Все пособия',
   },
   en: {
     brand: 'Naglyadka',
@@ -106,6 +115,10 @@ export const L: Record<Lang, Dict> = {
     subjects: 'subjects',
     grade: 'grade',
     preview: 'Preview',
+    frameOf: 'Frame {i} of {n}',
+    menu: 'Menu',
+    closeMenu: 'Close menu',
+    allOfSubject: 'All aids',
   },
 };
 
@@ -115,3 +128,8 @@ export const TYPES: Record<AidType, Record<Lang, string>> = {
   graph: { ru: 'График', en: 'Graph' },
   algo: { ru: 'Алгоритм', en: 'Algorithm' },
 };
+
+/** Fill a frame counter template. */
+export function frameLabel(t: Dict, i: number, n: number): string {
+  return t.frameOf.replace('{i}', String(i)).replace('{n}', String(n));
+}

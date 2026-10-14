@@ -1,35 +1,39 @@
 'use client';
 
 import Link from 'next/link';
+import { FilmStrip } from './Slide';
 import { useApp } from '@/context/AppContext';
-import { backLink } from '@/lib/styles';
+import { aidsOf } from '@/lib/data';
+import { frameLabel, TYPES } from '@/lib/i18n';
 import type { Aid, Subject } from '@/lib/types';
 
+/** An aid whose scene is not built yet: the frame is in the gate, unlit. */
 export default function StubView({ aid, subject }: { aid: Aid; subject: Subject }) {
   const { lang, t } = useApp();
+  const frames = aidsOf(subject.id);
+  const index = frames.findIndex((a) => a.id === aid.id) + 1;
 
   return (
-    <div className="view" style={{ maxWidth: 620 }}>
-      <Link href={`/${subject.id}`} className="back-link" style={{ ...backLink, marginBottom: 14 }}>
-        {'← ' + subject[lang].name}
-      </Link>
+    <div className="stub">
       <h1 className="aid-title">{aid[lang].title}</h1>
-      <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 20, textWrap: 'pretty' }}>
-        {aid[lang].summary}
+      <div className="furniture" style={{ marginTop: 12 }}>
+        <Link href={`/${subject.id}`}>{subject[lang].name}</Link>
+        <span>{aid.grade + ' ' + t.grade}</span>
+        <span>{TYPES[aid.type][lang]}</span>
+        <span>{frameLabel(t, index, frames.length)}</span>
       </div>
-      <div
-        style={{
-          padding: 26,
-          border: '1px dashed var(--line-2)',
-          borderRadius: 16,
-          background: 'var(--card-2)',
-          fontSize: 13.5,
-          color: 'var(--muted)',
-          textWrap: 'pretty',
-        }}
-      >
+      <p className="view-lede">{aid[lang].summary}</p>
+
+      <div className="frame is-unlit">
+        <span className="stub-mark" aria-hidden="true">
+          {index}
+        </span>
+      </div>
+      <p className="caption" style={{ fontSize: 20, color: 'var(--muted)', maxWidth: '52ch' }}>
         {t.stub}
-      </div>
+      </p>
+
+      <FilmStrip subjectId={subject.id} currentId={aid.id} />
     </div>
   );
 }

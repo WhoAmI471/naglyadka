@@ -22,9 +22,9 @@ export const titration: Sim = {
   ],
 
   legend: [
-    { ru: 'кривая титрования', en: 'titration curve', c: 'var(--primary)' },
-    { ru: 'текущая точка', en: 'current point', c: 'var(--amber)' },
-    { ru: 'точка эквивалентности', en: 'equivalence point', c: 'var(--violet)' },
+    { ru: 'кривая титрования', en: 'titration curve', c: 'var(--ink-ultra)' },
+    { ru: 'текущая точка', en: 'current point', c: 'var(--ink-ochre)' },
+    { ru: 'точка эквивалентности', en: 'equivalence point', c: 'var(--ink-verm)' },
   ],
 
   readouts(p, ru) {
@@ -50,6 +50,23 @@ export const titration: Sim = {
         unit: '',
       },
     ];
+  },
+
+  caption(p, ru) {
+    const veq = (p.ca * 25) / p.cb;
+    const cur = ph(p.ca, p.cb, p.vb);
+    const left = veq - p.vb;
+    const medium =
+      cur < 6.5 ? (ru ? 'кислая' : 'acidic') : cur > 7.5 ? (ru ? 'щелочная' : 'basic') : ru ? 'нейтральная' : 'neutral';
+    const head = ru
+      ? ['Долито ', { v: fmt(p.vb, 1) + ' мл' }, ' щёлочи — pH ', { v: fmt(cur, 2) }, ', среда ', { v: medium }, '. ']
+      : ['With ', { v: fmt(p.vb, 1) + ' mL' }, ' of base added, pH is ', { v: fmt(cur, 2) }, ' and the medium is ', { v: medium }, '. '];
+    if (left > 0.05) {
+      return [...head, ...(ru
+        ? ['До точки эквивалентности ещё ', { v: fmt(left, 1) + ' мл' }, '.']
+        : ['Another ', { v: fmt(left, 1) + ' mL' }, ' reaches the equivalence point.'])];
+    }
+    return [...head, ru ? 'Точка эквивалентности пройдена.' : 'The equivalence point is passed.'];
   },
 
   formulas(p, ru) {

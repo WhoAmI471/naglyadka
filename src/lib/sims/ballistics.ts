@@ -11,9 +11,9 @@ export const ballistics: Sim = {
   ],
 
   legend: [
-    { ru: 'траектория', en: 'trajectory', c: 'var(--primary)' },
-    { ru: 'ядро', en: 'cannonball', c: 'var(--amber)' },
-    { ru: 'вектор скорости', en: 'velocity vector', c: 'var(--violet)' },
+    { ru: 'траектория', en: 'trajectory', c: 'var(--ink-ultra)' },
+    { ru: 'ядро', en: 'cannonball', c: 'var(--ink-ochre)' },
+    { ru: 'вектор скорости', en: 'velocity vector', c: 'var(--ink-verm)' },
   ],
 
   readouts(p, ru) {
@@ -27,6 +27,16 @@ export const ballistics: Sim = {
       { label: ru ? 'Скорость по x' : 'Speed along x', value: fmt(vx, 1), unit: ru ? 'м/с' : 'm/s' },
       { label: ru ? 'Скорость по y' : 'Speed along y', value: fmt(vy, 1), unit: ru ? 'м/с' : 'm/s' },
     ];
+  },
+
+  caption(p, ru) {
+    const a = (p.ang * Math.PI) / 180;
+    const vy = p.v0 * Math.sin(a);
+    const R = fmt((p.v0 * p.v0 * Math.sin(2 * a)) / p.g, 1);
+    const H = fmt((vy * vy) / (2 * p.g), 1);
+    return ru
+      ? ['Угол ', { v: fmt(p.ang, 0) + '°' }, ', скорость ', { v: fmt(p.v0, 0) + ' м/с' }, ' — ядро пролетит ', { v: R + ' м' }, ' и поднимется на ', { v: H + ' м' }, '.']
+      : ['At ', { v: fmt(p.ang, 0) + '°' }, ' and ', { v: fmt(p.v0, 0) + ' m/s' }, ' the cannonball flies ', { v: R + ' m' }, ' and climbs ', { v: H + ' m' }, '.'];
   },
 
   formulas(p, ru) {

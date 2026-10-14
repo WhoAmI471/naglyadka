@@ -65,6 +65,9 @@ export interface Readout {
   unit: string;
 }
 
+/** A caption segment: plain text, or a live value set in bold. */
+export type CaptionPart = string | { v: string };
+
 export interface Formula {
   expr: string;
   sub: string;
@@ -94,5 +97,7 @@ export interface Sim {
   legend: SimLegend[];
   readouts(p: SimParams, ru: boolean): Readout[];
   formulas(p: SimParams, ru: boolean): Formula[];
+  /** One-sentence conclusion read under the scene; rewrites as parameters move. */
+  caption(p: SimParams, ru: boolean): CaptionPart[];
   draw(ctx: CanvasRenderingContext2D, w: number, h: number, p: SimParams, time: number, T2: CanvasTheme): void;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -8,7 +9,7 @@ import Toast from './Toast';
 import { useApp } from '@/context/AppContext';
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { t, ru } = useApp();
+  const { t } = useApp();
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
 
@@ -24,41 +25,24 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [navOpen]);
 
-  const menuLabel = ru ? 'Меню' : 'Menu';
-  const closeLabel = ru ? 'Закрыть меню' : 'Close menu';
-
   return (
     <div className="app-shell">
       <header className="app-topbar">
-        <button type="button" className="icon-button" aria-label={menuLabel} onClick={() => setNavOpen(true)}>
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-            <path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <button type="button" className="icon-button" aria-label={t.menu} onClick={() => setNavOpen(true)}>
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
-        <div
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 9,
-            background: 'linear-gradient(135deg, #1f6feb, #7047ef)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: 13,
-            color: '#fff',
-          }}
-        >
-          Н
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>{t.brand}</div>
+        <Link href="/" className="brand" style={{ padding: 0 }}>
+          <span className="brand-name">{t.brand}</span>
+        </Link>
       </header>
 
-      <Sidebar open={navOpen} onClose={() => setNavOpen(false)} closeLabel={closeLabel} />
+      <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
 
       <button
         type="button"
-        aria-label={closeLabel}
+        aria-label={t.closeMenu}
         tabIndex={navOpen ? 0 : -1}
         className={navOpen ? 'nav-backdrop is-open' : 'nav-backdrop'}
         onClick={() => setNavOpen(false)}

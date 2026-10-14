@@ -11,9 +11,9 @@ export const pendulum: Sim = {
   ],
 
   legend: [
-    { ru: 'нить и груз', en: 'string and bob', c: 'var(--amber)' },
-    { ru: 'дуга траектории', en: 'swing arc', c: 'var(--primary)' },
-    { ru: 'вертикаль', en: 'vertical', c: 'var(--dim)' },
+    { ru: 'нить и груз', en: 'string and bob', c: 'var(--ink-ochre)' },
+    { ru: 'дуга траектории', en: 'swing arc', c: 'var(--ink-ultra)' },
+    { ru: 'вертикаль', en: 'vertical', c: 'var(--ink-dim)' },
   ],
 
   readouts(p, ru) {
@@ -29,6 +29,15 @@ export const pendulum: Sim = {
       },
       { label: ru ? 'Подъём груза' : 'Bob rise', value: fmt(p.Ln * (1 - Math.cos(rad)) * 100, 1), unit: ru ? 'см' : 'cm' },
     ];
+  },
+
+  caption(p, ru) {
+    const T = fmt(2 * Math.PI * Math.sqrt(p.Ln / p.g), 3);
+    const rad = (p.a0 * Math.PI) / 180;
+    const v = fmt(Math.sqrt(2 * p.g * p.Ln * (1 - Math.cos(rad))), 2);
+    return ru
+      ? ['Нить ', { v: fmt(p.Ln, 2) + ' м' }, ', отклонение ', { v: fmt(p.a0, 0) + '°' }, ' — полное колебание длится ', { v: T + ' с' }, ', низ груз проходит на скорости ', { v: v + ' м/с' }, '.']
+      : ['A ', { v: fmt(p.Ln, 2) + ' m' }, ' string pulled to ', { v: fmt(p.a0, 0) + '°' }, ' swings once every ', { v: T + ' s' }, ' and passes the bottom at ', { v: v + ' m/s' }, '.'];
   },
 
   formulas(p, ru) {

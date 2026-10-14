@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SimCanvas from './SimCanvas';
+import { FilmStrip } from './Slide';
 import { useApp } from '@/context/AppContext';
+import { aidsOf } from '@/lib/data';
 import { fmt } from '@/lib/format';
+import { frameLabel, TYPES } from '@/lib/i18n';
 import { SIMS } from '@/lib/sims';
-import { backLink, ghostButton, panel, primaryButton, sectionLabel, softPanel } from '@/lib/styles';
 import type { Aid, SimId, SimParams, Subject } from '@/lib/types';
 
 interface Props {
@@ -16,7 +18,8 @@ interface Props {
   initialParams: SimParams;
 }
 
-const MONO = "'JetBrains Mono', ui-monospace, monospace";
+/** How long the moved slider and the numbers it changed keep the reserved colour. */
+const CAUSE_HOLD_MS = 2200;
 
 export default function AidView({ aid, subject, simId, initialParams }: Props) {
   const { lang, ru, t, theme, showToast } = useApp();
@@ -25,9 +28,35 @@ export default function AidView({ aid, subject, simId, initialParams }: Props) {
   const [params, setParams] = useState<SimParams>(initialParams);
   const [playing, setPlaying] = useState(true);
   const [resetToken, setResetToken] = useState(0);
+  // Cause and effect: the control last moved, and the readouts it changed.
+  const [cause, setCause] = useState<{ key: string; changed: string[] } | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+  }, []);
+
+  const frames = aidsOf(subject.id);
+  const index = frames.findIndex((a) => a.id === aid.id) + 1;
+
+  const readouts = sim.readouts(params, ru);
+  const formulas = sim.formulas(params, ru);
+  const caption = sim.caption(params, ru);
+
+  const move = (key: string, value: number) => {
+    const next = { ...params, [key]: value };
+    const before = sim.readouts(params, ru);
+    const after = sim.readouts(next, ru);
+    const changed = after.filter((r, i) => r.value !== before[i]?.value).map((r) => r.label);
+    setParams(next);
+    setCause({ key, changed });
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = setTimeout(() => setCause(null), CAUSE_HOLD_MS);
+  };
 
   const reset = () => {
     setParams({ ...sim.defaults });
+    setCause(null);
     setResetToken((n) => n + 1);
   };
 
@@ -39,174 +68,142 @@ export default function AidView({ aid, subject, simId, initialParams }: Props) {
     showToast(t.shared);
   };
 
-  const readouts = sim.readouts(params, ru);
-  const formulas = sim.formulas(params, ru);
-
   return (
-    <div className="view">
-      <Link href={`/${subject.id}`} className="back-link" style={{ ...backLink, marginBottom: 14 }}>
-        {'← ' + subject[lang].name}
-      </Link>
-
-      <div className="aid-header">
-        <div>
-          <h1 className="aid-title">{aid[lang].title}</h1>
-          <div style={{ fontSize: 13, color: 'var(--muted)', maxWidth: 640, textWrap: 'pretty' }}>
-            {aid[lang].summary}
-          </div>
+    <div className="aid">
+      <section className="aid-stage" aria-labelledby="aid-title">
+        <h1 className="aid-title" id="aid-title">
+          {aid[lang].title}
+        </h1>
+        <div className="furniture">
+          <Link href={`/${subject.id}`}>{subject[lang].name}</Link>
+          <span>{aid.grade + ' ' + t.grade}</span>
+          <span>{TYPES[aid.type][lang]}</span>
+          <span>{frameLabel(t, index, frames.length)}</span>
         </div>
-        <div className="aid-actions">
-          <button type="button" onClick={() => setPlaying((p) => !p)} style={primaryButton}>
-            {playing ? t.pause : t.play}
-          </button>
-          <button type="button" onClick={reset} className="ghost-button" style={ghostButton}>
-            {t.reset}
-          </button>
-          <button type="button" onClick={share} className="ghost-button" style={ghostButton}>
-            {t.share}
-          </button>
-        </div>
-      </div>
 
-      <div className="aid-layout">
-        <div className="aid-canvas-panel">
+        <div className="frame aid-frame" key={aid.id}>
           <SimCanvas sim={sim} params={params} playing={playing} theme={theme} resetToken={resetToken} />
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              flexWrap: 'wrap',
-              padding: '10px 4px 2px',
-              fontSize: 11.5,
-              color: 'var(--dim)',
-            }}
-          >
+          <div className="legend">
             {sim.legend.map((l) => (
-              <span key={l.ru} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <i style={{ width: 8, height: 8, borderRadius: '50%', background: l.c, display: 'inline-block' }} />
+              <span key={l.ru}>
+                <i style={{ background: l.c }} aria-hidden="true" />
                 {l[lang]}
               </span>
             ))}
           </div>
         </div>
 
-        <div className="aid-side">
-          <div style={panel}>
-            <div style={{ ...sectionLabel, marginBottom: 14 }}>{t.params}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {sim.controls.map((c) => {
-                const unit = ru ? c.unit : c.unitEn || c.unit;
-                return (
-                  <div key={c.key}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'baseline',
-                        gap: 10,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <label htmlFor={`ctl-${c.key}`} style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                        {c[lang]}
-                      </label>
-                      <span
-                        style={{
-                          fontSize: 12.5,
-                          fontWeight: 700,
-                          color: 'var(--primary)',
-                          fontVariantNumeric: 'tabular-nums',
-                        }}
-                      >
-                        {fmt(params[c.key], c.d) + ' ' + unit}
-                      </span>
-                    </div>
-                    <input
-                      id={`ctl-${c.key}`}
-                      type="range"
-                      min={c.min}
-                      max={c.max}
-                      step={c.step}
-                      value={params[c.key]}
-                      onChange={(e) => setParams((prev) => ({ ...prev, [c.key]: parseFloat(e.target.value) }))}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        <p className="caption">
+          {caption.map((part, i) => (typeof part === 'string' ? part : <b key={i}>{part.v}</b>))}
+        </p>
 
-          <div style={panel}>
-            <div style={{ ...sectionLabel, marginBottom: 12 }}>{t.result}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {readouts.map((r) => (
-                <div
-                  key={r.label}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'baseline',
-                    gap: 12,
-                    padding: '8px 10px',
-                    borderRadius: 10,
-                    background: 'var(--inset)',
-                  }}
-                >
-                  <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{r.label}</span>
-                  <span
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {r.value} <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--dim)' }}>{r.unit}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+      </section>
+
+      {/* Under one column this follows the panel, so the sliders sit right under the scene. */}
+      <div className="aid-more">
+        <FilmStrip subjectId={subject.id} currentId={aid.id} />
+
+        <div className="theory">
+          <h2>{t.how}</h2>
+          <p>{aid[lang].summary}</p>
+          {aid[lang].theory && <p>{aid[lang].theory}</p>}
         </div>
       </div>
 
-      <div className="panel-grid">
-        <div style={softPanel}>
-          <div style={{ ...sectionLabel, marginBottom: 12 }}>{t.formulas}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {formulas.map((f) => (
-              <div
-                key={f.expr}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  border: '1px solid var(--line)',
-                  background: 'var(--inset)',
-                }}
-              >
-                <div
-                  className="formula-line"
-                  style={{ fontFamily: MONO, fontSize: 14.5, color: 'var(--violet)', marginBottom: 5 }}
-                >
-                  {f.expr}
+      <aside className="aid-panel" aria-label={t.params}>
+        <div>
+          <h2 className="panel-title">{t.params}</h2>
+          {sim.controls.map((c) => {
+            const unit = ru ? c.unit : c.unitEn || c.unit;
+            const pct = ((params[c.key] - c.min) / (c.max - c.min)) * 100;
+            const active = cause?.key === c.key;
+            return (
+              <div key={c.key} className={active ? 'control is-active' : 'control'}>
+                <div className="control-head">
+                  <label htmlFor={`ctl-${c.key}`}>{c[lang]}</label>
+                  <span className="control-value">{fmt(params[c.key], c.d) + (unit === '°' ? '°' : ' ' + unit)}</span>
                 </div>
-                <div
-                  className="formula-line"
-                  style={{ fontFamily: MONO, fontSize: 13, color: 'var(--text)', marginBottom: 5 }}
-                >
-                  {f.sub}
-                </div>
-                <div style={{ fontSize: 11.5, color: 'var(--dim)' }}>{f.note}</div>
+                <input
+                  id={`ctl-${c.key}`}
+                  className="range"
+                  type="range"
+                  min={c.min}
+                  max={c.max}
+                  step={c.step}
+                  value={params[c.key]}
+                  style={{ ['--pct' as string]: pct + '%' }}
+                  onChange={(e) => move(c.key, parseFloat(e.target.value))}
+                />
               </div>
-            ))}
+            );
+          })}
+          <div className="aid-actions" style={{ marginTop: 26 }}>
+            <button type="button" className="btn" onClick={() => setPlaying((p) => !p)} aria-pressed={!playing}>
+              {playing ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M5 3.2v9.6L12.6 8z" fill="currentColor" />
+                </svg>
+              )}
+              {playing ? t.pause : t.play}
+            </button>
+            <button type="button" className="btn" onClick={reset}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5M3 2.6v2.6h2.6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {t.reset}
+            </button>
+            <button type="button" className="btn btn-lamp" onClick={share}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M6.6 9.4l2.8-2.8M7.4 4.6l1.2-1.2a2.6 2.6 0 0 1 3.7 3.7l-1.2 1.2M8.6 11.4l-1.2 1.2a2.6 2.6 0 0 1-3.7-3.7l1.2-1.2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {t.share}
+            </button>
           </div>
         </div>
-        <div style={softPanel}>
-          <div style={{ ...sectionLabel, marginBottom: 12 }}>{t.how}</div>
-          <div style={{ fontSize: 13.5, color: 'var(--text)', textWrap: 'pretty' }}>{aid[lang].theory}</div>
+
+        <div>
+          <h2 className="panel-title">{t.result}</h2>
+          <table className="readouts">
+            <tbody>
+              {readouts.map((r) => (
+                <tr key={r.label} className={cause?.changed.includes(r.label) ? 'is-changed' : undefined}>
+                  <th scope="row">{r.label}</th>
+                  <td className="num">{r.value}</td>
+                  <td className="unit">{r.unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        <div>
+          <h2 className="panel-title">{t.formulas}</h2>
+          {formulas.map((f) => (
+            <div key={f.expr} className="formula">
+              <div className="formula-expr">{f.expr}</div>
+              <div className="formula-sub">{f.sub}</div>
+              <div className="formula-note">{f.note}</div>
+            </div>
+          ))}
+        </div>
+      </aside>
     </div>
   );
 }

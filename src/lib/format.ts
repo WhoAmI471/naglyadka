@@ -30,6 +30,13 @@ export function fmt(n: number, d: number): string {
   return (Math.round(n * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d).replace('.', ',');
 }
 
+/** Font stack the canvas labels use; set from the page's UI face at paint time. */
+let canvasFont = 'system-ui, sans-serif';
+
+export function setCanvasFont(stack: string): void {
+  if (stack) canvasFont = stack;
+}
+
 /** Canvas text helper: draw a label and restore left alignment. */
 export function lbl(
   ctx: CanvasRenderingContext2D,
@@ -41,7 +48,8 @@ export function lbl(
   align?: CanvasTextAlign,
 ): void {
   ctx.fillStyle = color;
-  ctx.font = (size || 11) + 'px Inter, sans-serif';
+  // Scene labels are read from the back of a classroom: set a size up.
+  ctx.font = Math.round((size || 11) * 1.25) + 'px ' + canvasFont;
   ctx.textAlign = align || 'left';
   ctx.fillText(text, x, y);
   ctx.textAlign = 'left';
